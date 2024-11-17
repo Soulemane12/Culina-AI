@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recipe Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #2563eb;
+            --background-color: #0f172a;
+            --card-color: #1e293b;
+            --text-color: #e2e8f0;
+            --border-color: #334155;
+            --border-radius: 12px;
+            --error-color: #ef4444;
+            --success-color: #22c55e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-section {
+            position: relative;
+            border: 2px dashed var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-section:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-section.drag-active {
+            background-color: rgba(59, 130, 246, 0.15);
+            border-color: var(--primary-dark);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .preview-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .preview-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%;
+        }
+
+        .preview-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--border-color);
+        }
+
+        .remove-image {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--error-color);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            z-index: 1;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .form-group select,
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--card-color);
+            color: var(--text-color);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .submit-button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            gap: 0.5rem;
+        }
+
+        .submit-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .submit-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert.info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--primary-color);
+        }
+
+        .alert.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            display: none;
+        }
+
+        .recipe-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .recipe-content {
+            background-color: var(--card-color);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .close-modal:hover {
+            transform: rotate(90deg);
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .recipe-content {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Recipe Generator</h1>
+            <p>Upload images of ingredients to generate a delicious recipe!</p>
+        </div>
+
+        <form id="recipe-form">
+            <div class="upload-section" id="drop-zone">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <h3>Drop your food images here</h3>
+                <p>or click to select files</p>
+                <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                <div class="preview-images" id="preview-container"></div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="dietary-preference">Dietary Preference</label>
+                    <select id="dietary-preference" required>
+                        <option value="">Select preference</option>
+                        <option value="none">None</option>
+                        <option value="vegan">Vegan</option>
+                        <option value="vegetarian">Vegetarian</option>
+                        <option value="keto">Keto</option>
+                        <option value="gluten-free">Gluten-Free</option>
+                        <option value="paleo">Paleo</option>
+                        <option value="halal">Halal</option>
+                        <option value="kosher">Kosher</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="health-goal">Health Goal</label>
+                    <select id="health-goal" required>
+                        <option value="">Select goal</option>
+                        <option value="none">None</option>
+                        <option value="weight-loss">Weight Loss</option>
+                        <option value="muscle-gain">Muscle Gain</option>
+                        <option value="maintain-health">Maintain Health</option>
+                        <option value="heart-health">Heart Health</option>
+                        <option value="energy-boost">Energy Boost</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="cooking-skill">Cooking Skill Level</label>
+                    <select id="cooking-skill" required>
+                        <option value="">Select skill level</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="allergies">Allergies</label>
+                    <input type="text" id="allergies" placeholder="e.g., nuts, dairy">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-button" id="submit-button">
+                <span>Generate Recipe</span>
+                <i class="fas fa-spinner fa-spin" style="display: none;"></i>
+            </button>
+
+            <div class="alert info">
+                <i class="fas fa-lightbulb"></i>
+                <p>Pro tip: Upload clear images of your ingredients for better recipe suggestions.</p>
+            </div>
+
+            <div class="alert error" id="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <p></p>
+            </div>
+        </form>
+    </div>
+
+    <div class="recipe-modal" id="recipe-modal">
+        <div class="recipe-content">
+            <button class="close-modal" id="close-modal">&times;</button>
+            <h2>Your Recipe</h2>
+            <div id="recipe-details"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+        const form = document.getElementById('recipe-form');
+        const submitButton = document.getElementById('submit-button');
+        const spinner = submitButton.querySelector('.fa-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const recipeModal = document.getElementById('recipe-modal');
+        const closeModal = document.getElementById('close-modal');
+        const recipeDetails = document.getElementById('recipe-details');
+        
+        // Track uploaded files
+        let uploadedFiles = new Set();
+        
+        // Utility Functions
+        function showError(message, duration = 5000) {
+            errorMessage.querySelector('p').textContent = message;
+            errorMessage.style.display = 'flex';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, duration);
+        }
+        
+        function updateSubmitButton() {
+            submitButton.disabled = uploadedFiles.size === 0;
+        }
+        
+        function setLoading(isLoading) {
+            spinner.style.display = isLoading ? 'inline-block' : 'none';
+            submitButton.disabled = isLoading;
+            const buttonText = submitButton.querySelector('span');
+            buttonText.textContent = isLoading ? 'Generating...' : 'Generate Recipe';
+        }
+        
+        // File Handling Functions
+        function validateFile(file) {
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload only image files.');
+                return false;
+            }
+        
+            // Check file size (5MB limit)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (file.size > maxSize) {
+                showError('File size should not exceed 5MB.');
+                return false;
+            }
+        
+            // Check if file already exists
+            if (uploadedFiles.has(file.name)) {
+                showError('This image has already been uploaded.');
+                return false;
+            }
+        
+            return true;
+        }
+        
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (!validateFile(file)) return;
+        
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedFiles.add(file.name);
+                    
+                    const container = document.createElement('div');
+                    container.className = 'preview-container';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-image';
+                    img.alt = file.name;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-image';
+                    removeBtn.innerHTML = '×';
+                    removeBtn.setAttribute('aria-label', 'Remove image');
+                    removeBtn.onclick = (evt) => {
+                        evt.stopPropagation();
+                        container.remove();
+                        uploadedFiles.delete(file.name);
+                        updateSubmitButton();
+                    };
+                    
+                    container.appendChild(img);
+                    container.appendChild(removeBtn);
+                    previewContainer.appendChild(container);
+                    updateSubmitButton();
+                };
+        
+                reader.onerror = () => {
+                    showError('Error reading file. Please try again.');
+                };
+        
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Drag and Drop Handlers
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight(e) {
+            dropZone.classList.add('drag-active');
+        }
+        
+        function unhighlight(e) {
+            dropZone.classList.remove('drag-active');
+        }
+        
+        function handleDrop(e) {
+            unhighlight(e);
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        // Event Listeners for Drag and Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+        
+        // File Input Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        
+        // Modal Handlers
+        function showModal(content) {
+            recipeDetails.innerHTML = content;
+            recipeModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function hideModal() {
+            recipeModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        closeModal.addEventListener('click', hideModal);
+        recipeModal.addEventListener('click', (e) => {
+            if (e.target === recipeModal) hideModal();
+        });
+        
+        // Keyboard accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && recipeModal.style.display === 'flex') {
+                hideModal();
+            }
+        });
+        
+        // Form Submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+        
+            // Validate form
+            const dietaryPreference = document.getElementById('dietary-preference').value;
+            const healthGoal = document.getElementById('health-goal').value;
+            const cookingSkill = document.getElementById('cooking-skill').value;
+        
+            if (!dietaryPreference || !healthGoal || !cookingSkill) {
+                showError('Please fill in all required fields.');
+                return;
+            }
+        
+            if (uploadedFiles.size === 0) {
+                showError('Please upload at least one image.');
+                return;
+            }
+        
+            setLoading(true);
+        
+            try {
+                const formData = new FormData();
+                
+                // Append files
+                const fileInputs = previewContainer.querySelectorAll('img');
+                fileInputs.forEach((img, index) => {
+                    // Convert base64 to blob
+                    const blob = dataURLtoBlob(img.src);
+                    formData.append('files', blob, Array.from(uploadedFiles)[index]);
+                });
+        
+                // Append other form data
+                formData.append('dietary_preference', dietaryPreference);
+                formData.append('health_goal', healthGoal);
+                formData.append('cooking_skill', cookingSkill);
+                formData.append('allergies', document.getElementById('allergies').value);
+        
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+        
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+        
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Format and display recipe
+                    const recipeHTML = `
+                        <h3>${data.recipe.title || 'Your Recipe'}</h3>
+                        <div class="recipe-content">
+                            ${data.recipe.content || data.recipe}
+                        </div>
+                    `;
+                    showModal(recipeHTML);
+                } else {
+                    throw new Error(data.error || 'Failed to generate recipe');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to generate recipe. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+        
+        // Utility function to convert base64 to blob
+        function dataURLtoBlob(dataURL) {
+            const arr = dataURL.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+        
+        // Initialize
+        updateSubmitButton();
+        </script>
+</body>
+</html>
